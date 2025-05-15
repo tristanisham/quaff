@@ -19,6 +19,10 @@ pub enum Command {
     Init,
     Fmt {
         #[arg(long)]
-        minify: bool
+        minify: bool,
+
+        /// Dirs to format
+        #[arg(value_name = "Dirs")]
+        dirs: Vec<PathBuf>,
     },
 }

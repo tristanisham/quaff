@@ -5,6 +5,7 @@ use cli::config::LangOption;
 use cli::{config, sql};
 use colored::Colorize;
 use lang::php;
+use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use std::fs;
 use std::str::FromStr;
 
@@ -23,8 +24,19 @@ fn main() -> anyhow::Result<()> {
             let config_serialized = toml::to_string_pretty(&default_config)?;
             fs::write(&config_file, config_serialized)?;
         }
-        Some(Command::Fmt { minify }) => {
-            sql::fmt_recursively(&cwd, *minify)?;
+        Some(Command::Fmt { minify, dirs }) => {
+            if dirs.is_empty() {
+                eprintln!("{}: please specify a directory.", "Warn".yellow());
+                return Ok(());
+            }
+
+            dirs.par_iter().for_each(|d| {
+                if d.is_dir() {
+                    if let Err(e) = sql::fmt_recursively(d, *minify) {
+                        eprintln!("{}: {e}", "Error".red());
+                    }
+                }
+            });
         }
         None => {
             if !config_file.exists() {

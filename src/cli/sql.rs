@@ -52,11 +52,19 @@ pub fn fmt_recursively<P: AsRef<Path>>(dir: P, minify: bool) -> anyhow::Result<(
             let mut buffer = String::new();
             for node in &ast {
                 let formatted = match minify {
-                    false => sqlformat::format(
-                        &node.to_string(),
-                        &sqlformat::QueryParams::None,
-                        &sqlformat::FormatOptions::default(),
-                    ),
+                    false => {
+                        let mut node_str = sqlformat::format(
+                            &node.to_string(),
+                            &sqlformat::QueryParams::None,
+                            &sqlformat::FormatOptions::default(),
+                        );
+
+                        if !node_str.ends_with(";") {
+                            node_str.push(';');
+                        }
+
+                        node_str
+                    }
                     true => {
                         let mut node_str = node.to_string();
                         node_str.push(';');
