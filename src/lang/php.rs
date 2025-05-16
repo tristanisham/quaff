@@ -1,5 +1,5 @@
 use anyhow::anyhow;
-use sqlparser::ast::{ColumnOption, DataType, ExactNumberInfo, Statement};
+use sqlparser::ast::{ColumnOption, DataType, ExactNumberInfo, ObjectName, Statement};
 use std::{fmt::Display, str::FromStr};
 use thiserror::Error;
 
@@ -17,6 +17,7 @@ impl Class {
 
         for stmt in stmts {
             if let Statement::CreateTable(table) = stmt {
+                
                 class.name = table.name.0.get(0).unwrap().to_string();
 
                 let mut fields: Vec<Field> = vec![];

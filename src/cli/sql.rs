@@ -1,8 +1,8 @@
 use anyhow::anyhow;
 use colored::Colorize;
 use rayon::prelude::*;
-use sqlparser::parser::Parser;
-use std::{fs, path::Path};
+use sqlparser::{ast::Statement, parser::Parser};
+use std::{fmt::Display, fs, path::Path, str::FromStr};
 use walkdir::WalkDir;
 
 pub fn parse_file<P: AsRef<Path>>(file: P) -> anyhow::Result<Vec<sqlparser::ast::Statement>> {
@@ -84,39 +84,80 @@ pub fn fmt_recursively<P: AsRef<Path>>(dir: P, minify: bool) -> anyhow::Result<(
     Ok(())
 }
 
-pub fn fmt(sql: &str, minify: bool) -> anyhow::Result<String> {
-    let dialect = sqlparser::dialect::GenericDialect {};
-    let ast = Parser::parse_sql(&dialect, &sql)?;
+pub struct Formatter {
+    pub minify: bool,
+}
 
-    let mut buffer = String::new();
-    for (i, node) in ast.iter().enumerate() {
-        let formatted = match minify {
-            false => {
-                let mut node_str = sqlformat::format(
-                    &node.to_string(),
-                    &sqlformat::QueryParams::None,
-                    &sqlformat::FormatOptions::default(),
-                );
+impl Default for Formatter {
+    fn default() -> Self {
+        Self { minify: false }
+    }
+}
 
-                if !node_str.ends_with(";") {
-                    node_str.push(';');
-                }
-
-                node_str
-            }
-            true => {
-                let mut node_str = node.to_string();
-                node_str.push(';');
-                node_str
-            }
-        };
-
-        buffer.push_str(&formatted);
-
-        if ast.len() > 1 && i < ast.len()-1 {
-            buffer.push_str("\n\n");
-        }
+impl Formatter {
+    pub fn new(minify: bool) -> Self {
+        Self { minify }
     }
 
-    Ok(buffer)
+    pub fn run(&self, sql: &str) -> anyhow::Result<String> {
+        let dialect = sqlparser::dialect::GenericDialect {};
+        let ast = Parser::parse_sql(&dialect, &sql)?;
+
+        let mut buffer = String::new();
+        for (i, node) in ast.iter().enumerate() {
+            let formatted = match self.minify {
+                false => {
+                    let mut node_str = sqlformat::format(
+                        &node.to_string(),
+                        &sqlformat::QueryParams::None,
+                        &sqlformat::FormatOptions::default(),
+                    );
+
+                    if !node_str.ends_with(";") {
+                        node_str.push(';');
+                    }
+
+                    node_str
+                }
+                true => {
+                    let mut node_str = node.to_string();
+                    node_str.push(';');
+                    node_str
+                }
+            };
+
+            buffer.push_str(&formatted);
+
+            if ast.len() > 1 && i < ast.len() - 1 {
+                buffer.push_str("\n\n");
+            }
+        }
+
+        Ok(buffer)
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum RowCase {
+    CamelCase,
+    SnakeCase,
+    PascalCase,
+}
+
+impl Display for RowCase {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
+impl FromStr for RowCase {
+    type Err = String;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "camel" => Ok(Self::CamelCase),
+            "snake" => Ok(Self::SnakeCase),
+            "pascal" => Ok(Self::PascalCase),
+            _ => Err(format!("Unknown case: {s}")),
+        }
+    }
 }

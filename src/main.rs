@@ -26,12 +26,14 @@ fn main() -> anyhow::Result<()> {
             fs::write(&config_file, config_serialized)?;
         }
         Some(Command::Fmt { minify, dirs }) => {
+            let formatter = sql::Formatter::new(*minify);
+
             if dirs.is_empty() {
                 eprintln!("Reading from stdin");
                 let mut buffer = String::new();
                 io::stdin().read_to_string(&mut buffer)?;
 
-                let output = sql::fmt(&buffer, *minify)?;
+                let output = formatter.run(&buffer)?;
                 print!("{output}");
                 io::stdout().flush()?;
 
@@ -45,7 +47,8 @@ fn main() -> anyhow::Result<()> {
                     }
                 } else if d.is_file() {
                     let f = fs::read_to_string(d).unwrap();
-                    let formatted = match sql::fmt(&f, *minify) {
+
+                    let formatted = match formatter.run(&f) {
                         Ok(s) => s,
                         Err(e) => {
                             eprintln!(
