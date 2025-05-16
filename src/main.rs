@@ -1,17 +1,20 @@
 use anyhow::anyhow;
 use clap::Parser;
 use cli::Command;
+use cli::config;
 use cli::config::LangOption;
-use cli::{config, sql};
 use colored::Colorize;
 use lang::php;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
+use sql::schema::Formatter;
 use std::io::{Read, Write};
 use std::str::FromStr;
 use std::{fs, io};
 
 mod cli;
 mod lang;
+mod sql;
+
 fn main() -> anyhow::Result<()> {
     let args = cli::Args::parse();
 
@@ -26,7 +29,7 @@ fn main() -> anyhow::Result<()> {
             fs::write(&config_file, config_serialized)?;
         }
         Some(Command::Fmt { minify, dirs }) => {
-            let formatter = sql::Formatter::new(*minify);
+            let formatter = Formatter::new(*minify);
 
             if dirs.is_empty() {
                 eprintln!("Reading from stdin");

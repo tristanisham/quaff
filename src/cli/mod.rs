@@ -1,5 +1,4 @@
 pub mod config;
-pub mod sql;
 
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
