@@ -31,7 +31,6 @@ fn main() -> anyhow::Result<()> {
                 let mut buffer = String::new();
                 io::stdin().read_to_string(&mut buffer)?;
 
-
                 let output = sql::fmt(&buffer, *minify)?;
                 print!("{output}");
                 io::stdout().flush()?;
@@ -46,7 +45,17 @@ fn main() -> anyhow::Result<()> {
                     }
                 } else if d.is_file() {
                     let f = fs::read_to_string(d).unwrap();
-                    let formatted = sql::fmt(&f, *minify).unwrap();
+                    let formatted = match sql::fmt(&f, *minify) {
+                        Ok(s) => s,
+                        Err(e) => {
+                            eprintln!(
+                                "{}: {e} ({:?})",
+                                "Format Error".red(),
+                                std::path::absolute(d).unwrap_or(d.to_path_buf())
+                            );
+                            std::process::exit(1);
+                        }
+                    };
                     fs::write(d, formatted).unwrap();
                     println!("{:?}", std::path::absolute(d).unwrap_or(d.to_path_buf()));
                 }

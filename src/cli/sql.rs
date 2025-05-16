@@ -89,7 +89,7 @@ pub fn fmt(sql: &str, minify: bool) -> anyhow::Result<String> {
     let ast = Parser::parse_sql(&dialect, &sql)?;
 
     let mut buffer = String::new();
-    for node in &ast {
+    for (i, node) in ast.iter().enumerate() {
         let formatted = match minify {
             false => {
                 let mut node_str = sqlformat::format(
@@ -112,6 +112,10 @@ pub fn fmt(sql: &str, minify: bool) -> anyhow::Result<String> {
         };
 
         buffer.push_str(&formatted);
+
+        if ast.len() > 1 && i < ast.len()-1 {
+            buffer.push_str("\n\n");
+        }
     }
 
     Ok(buffer)
