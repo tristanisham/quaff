@@ -6,8 +6,9 @@ use cli::{config, sql};
 use colored::Colorize;
 use lang::php;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
-use std::fs;
+use std::io::{Read, Write};
 use std::str::FromStr;
+use std::{fs, io};
 
 mod cli;
 mod lang;
@@ -26,7 +27,15 @@ fn main() -> anyhow::Result<()> {
         }
         Some(Command::Fmt { minify, dirs }) => {
             if dirs.is_empty() {
-                eprintln!("{}: please specify a directory.", "Warn".yellow());
+                eprintln!("Reading from stdin");
+                let mut buffer = String::new();
+                io::stdin().read_to_string(&mut buffer)?;
+
+
+                let output = sql::fmt(&buffer, *minify)?;
+                print!("{output}");
+                io::stdout().flush()?;
+
                 return Ok(());
             }
 
@@ -35,6 +44,11 @@ fn main() -> anyhow::Result<()> {
                     if let Err(e) = sql::fmt_recursively(d, *minify) {
                         eprintln!("{}: {e}", "Error".red());
                     }
+                } else if d.is_file() {
+                    let f = fs::read_to_string(d).unwrap();
+                    let formatted = sql::fmt(&f, *minify).unwrap();
+                    fs::write(d, formatted).unwrap();
+                    println!("{:?}", std::path::absolute(d).unwrap_or(d.to_path_buf()));
                 }
             });
         }

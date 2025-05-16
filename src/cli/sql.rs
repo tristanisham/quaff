@@ -83,3 +83,36 @@ pub fn fmt_recursively<P: AsRef<Path>>(dir: P, minify: bool) -> anyhow::Result<(
 
     Ok(())
 }
+
+pub fn fmt(sql: &str, minify: bool) -> anyhow::Result<String> {
+    let dialect = sqlparser::dialect::GenericDialect {};
+    let ast = Parser::parse_sql(&dialect, &sql)?;
+
+    let mut buffer = String::new();
+    for node in &ast {
+        let formatted = match minify {
+            false => {
+                let mut node_str = sqlformat::format(
+                    &node.to_string(),
+                    &sqlformat::QueryParams::None,
+                    &sqlformat::FormatOptions::default(),
+                );
+
+                if !node_str.ends_with(";") {
+                    node_str.push(';');
+                }
+
+                node_str
+            }
+            true => {
+                let mut node_str = node.to_string();
+                node_str.push(';');
+                node_str
+            }
+        };
+
+        buffer.push_str(&formatted);
+    }
+
+    Ok(buffer)
+}
